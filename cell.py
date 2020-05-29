@@ -18,11 +18,7 @@ from mesa.time  import BaseScheduler
 
 class Cell(Agent):
     """
-    Base Cell class. Each cell has an oxygen level `e` between 0 and 100. Once
-    e > 10, the cell has a chance of activating (set with `activation_odds`).
-
-    Each cell loses one oxygen point per turn. Once the oxygen level falls
-    under 10, the cell deactivates.
+    Base Cell class. 
     """
 
     def __init__(self, unique_id, model, activated = False, activation_odds = 0.5):
@@ -72,6 +68,9 @@ class Cell(Agent):
 class Capillary(Cell):
     """
     Cell that provides oxygen and nutritions to neighboring cells
+
+    There is a chance that the capillary will expand into a neighboring cell
+    if the cell is empty and the amount of VEGF marker is above a certain threshold
     """
 
     def __init__(self, unique_id, model, activated = True, supply = 100):
@@ -85,7 +84,6 @@ class Capillary(Cell):
         if self.activated:
             targets = self.model.grid.neighbor_iter(self.pos, moore = True)
             for t in targets:
-                # print(t)
 
                 if t.vegf > 20 and type(t).__name__ == "Empty":
                     roll = r.random()
@@ -125,6 +123,7 @@ class Cancer(Cell):
                 self.model.grid.remove_agent(t)
                 new_cancer = Cancer(coord, self.model, vegf_mutation=self.vegf_mutation)
                 self.model.grid.place_agent(new_cancer, coord)
+                # when replacing an empty cell, make sure to add it to the scheduler
                 self.model.grid.scheduler.add(new_cancer)
 
         # there is chance to mutate and produce vegf
@@ -153,7 +152,7 @@ class Normal(Cell):
 
 class Empty(Cell):
     """
-    Cell that sends out activation oxygen for up to 15 turns
+    Cell that can be replaced
     """
 
     def step(self):
