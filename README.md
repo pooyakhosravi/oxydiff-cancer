@@ -10,8 +10,8 @@ and more details about the methods implemented can be found here:
 
 
 Setup
-
-creata conda environment. I called my cell-mesa
+Have anaconda or miniconda installed. 
+creata a conda environment. I called my environment cell-mesa
 
 ```
 conda env create --name cell-mesa python=3.7
@@ -19,5 +19,4 @@ conda env create --name cell-mesa python=3.7
 conda activate cell-mesa
 
 pip install -r requirements.txt
-
 ```
