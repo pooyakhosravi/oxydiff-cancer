@@ -8,7 +8,6 @@ https://github.com/shippy/cell-activation-model
 and more details about the methods implemented can be found here:
 - tba
 
-
 Setup
 Have anaconda or miniconda installed. 
 creata a conda environment. I called my environment cell-mesa
