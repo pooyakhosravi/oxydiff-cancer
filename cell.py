@@ -33,7 +33,12 @@ class Cell(Agent):
         
         # the logic here need work
         # how do we decide the oxygen distribution
-        # do we look at all neighbors?        
+        # do we look at all neighbors?    
+
+
+        # can move in all directions  
+        # probability based on differences and diffusion constant
+        # oxygen packets can move in any direction 
         for t in targets:
             if type(t).__name__ != "Capillary":
                 oxy_to_add = abs((self.oxygen - t.oxygen)/2)
@@ -85,9 +90,15 @@ class Capillary(Cell):
             targets = self.model.grid.neighbor_iter(self.pos, moore = True)
             for t in targets:
 
+
+                # limit blood vessel growth
+                # feedback system to limit the growth
+                # smaller capillary, less oxygen supply
+                # consume vegf
                 if t.vegf > 20 and type(t).__name__ == "Empty":
                     roll = r.random()
                     if roll < 0.1:
+                        t.vegf = 0
                         coord = t.pos
                         self.model.grid.remove_agent(t)
                         new_cap = Capillary(coord, self.model)
@@ -134,6 +145,12 @@ class Cancer(Cell):
     
         # to propogate unused resources to other cells
         self.step_maintenance()
+
+        # tumor necrosis
+        # remove tumor cells in the middle of cluster
+
+        # wont kill the intial one
+        # kill after some 
             
     
     def roll_for_vgef(self):
@@ -200,5 +217,9 @@ class PetriDish(Model):
                 self.grid.place_agent(agent, coords)
                 
 
+    # random permuation each time.
+    # shuffle
     def step(self):
+
+        # self.schedule = shuffle(self.schedule)
         self.schedule.step() # goes through agents in the order of addition
