@@ -18,7 +18,7 @@ from mesa.time  import BaseScheduler
 
 class Cell(Agent):
     """
-    Base Cell class. 
+    Base Cell class.
     """
 
     def __init__(self, unique_id, model, activated = False, activation_odds = 0.5):
@@ -30,15 +30,15 @@ class Cell(Agent):
     def step_maintenance(self):
         self.subtract_oxygen(1)
         targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
-        
+
         # the logic here need work
         # how do we decide the oxygen distribution
-        # do we look at all neighbors?    
+        # do we look at all neighbors?
 
 
-        # can move in all directions  
+        # can move in all directions
         # probability based on differences and diffusion constant
-        # oxygen packets can move in any direction 
+        # oxygen packets can move in any direction
         for t in targets:
             if type(t).__name__ != "Capillary":
                 oxy_to_add = abs((self.oxygen - t.oxygen)/2)
@@ -111,7 +111,7 @@ class Capillary(Cell):
 
 class Cancer(Cell):
     """
-        Cancer cell that consumes oxygen to produce itself. 
+        Cancer cell that consumes oxygen to produce itself.
         If there is enough nutrition, the cell will duplicate into a random neighboring cell while consuming half of its energy
         There is also a little chance for the cancer cell to produce VEGF if it is oxygen deficient
             - Vascular endothelial growth factor (VEGF) is a signalling protein that promotes the growth of new blood vessels.
@@ -124,7 +124,7 @@ class Cancer(Cell):
     def step(self):
         # self.step_maintenance()
         self.subtract_oxygen(20)
-        
+
         targets = self.model.grid.neighbor_iter(self.pos, moore = True)
         for t in targets:
             roll = r.random()
@@ -142,7 +142,7 @@ class Cancer(Cell):
 
         if self.vegf_mutation:
             self.vegf = 30
-    
+
         # to propogate unused resources to other cells
         self.step_maintenance()
 
@@ -150,9 +150,9 @@ class Cancer(Cell):
         # remove tumor cells in the middle of cluster
 
         # wont kill the intial one
-        # kill after some 
-            
-    
+        # kill after some
+
+
     def roll_for_vgef(self):
         roll = r.random()
         if roll < .01:
@@ -204,9 +204,10 @@ class PetriDish(Model):
             for y in range(height):
                 roll = r.random()
                 coords = (x, y)
-                if x == width - 1:
+                if coords[0] == coords[1]:
                     agent = Capillary(coords, self)
                 elif coords == cancer_coords:
+                    print(coords)
                     agent = Cancer(coords, self)
                 elif roll <= proportion_normal:
                     agent = Normal(coords, self)
@@ -215,7 +216,7 @@ class PetriDish(Model):
 
                 self.schedule.add(agent)
                 self.grid.place_agent(agent, coords)
-                
+
 
     # random permuation each time.
     # shuffle

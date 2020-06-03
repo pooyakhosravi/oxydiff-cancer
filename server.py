@@ -64,7 +64,7 @@ def vegf_portrayal(cell):
                  "r": max(0.1, cell.vegf / 50)}
     return portrayal
 
-width = 10
+width = 20
 height = 20
 
 # new state vs old state for the simulation
@@ -84,7 +84,7 @@ histogram = HistogramModule(list(range(100)), 200, 500)
 
 # - measurements
 # historgram of cells
-# Record 
+# Record
 # latent tumor
 # tumor necrosis inside tumor
 
@@ -92,4 +92,3 @@ server = ModularServer(c.PetriDish, [grid, vegf_grid, histogram], "Simple cell a
                        {
                            "width": width, "height": height
                        })
-
