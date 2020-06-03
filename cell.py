@@ -15,6 +15,7 @@ from mesa import Agent
 from mesa.model import Model
 from mesa.space import SingleGrid
 from mesa.time  import BaseScheduler
+import random
 
 class Cell(Agent):
     """
@@ -193,7 +194,13 @@ class PetriDish(Model):
 
         self.grid.scheduler = self.schedule
 
-        cancer_coords = (math.floor(2), math.floor(height/2))
+        cancer_x = random.randint(0, width - 1)
+        while True:
+            cancer_y = cancer_x + random.randint(-5, 5)
+            if cancer_y >= 0 and cancer_y < height and cancer_y != cancer_x:
+                break
+
+        cancer_coords = (cancer_x, cancer_y)
 
         ## Rolled into the placement of other cells
         # self.schedule.add(initial_activator)
@@ -207,7 +214,6 @@ class PetriDish(Model):
                 if coords[0] == coords[1]:
                     agent = Capillary(coords, self)
                 elif coords == cancer_coords:
-                    print(coords)
                     agent = Cancer(coords, self)
                 elif roll <= proportion_normal:
                     agent = Normal(coords, self)
