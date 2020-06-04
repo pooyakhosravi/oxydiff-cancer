@@ -14,7 +14,7 @@ import math
 from mesa import Agent
 from mesa.model import Model
 from mesa.space import SingleGrid
-from mesa.time  import BaseScheduler
+from mesa.time  import BaseScheduler, SimultaneousActivation
 import random
 
 class Cell(Agent):
@@ -189,7 +189,7 @@ class PetriDish(Model):
 
     def __init__(self, width = 20, height = 20, proportion_normal = 0.3):
         self.running = True
-        self.schedule = BaseScheduler(self)
+        self.schedule = SimultaneousActivation(self)
         self.grid = SingleGrid(width, height, torus = False)
 
         self.grid.scheduler = self.schedule
