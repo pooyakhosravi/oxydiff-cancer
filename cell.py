@@ -27,8 +27,10 @@ class Cell(Agent):
         self.oxygen = 0
         self.activated = activated
         self.vegf = 0
+        self.steps = 0
 
     def step_maintenance(self):
+        self.steps += 1
         self.subtract_oxygen(1)
         targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
 
@@ -52,7 +54,24 @@ class Cell(Agent):
                 self.vegf -= vegf_to_add
                 t.vegf += vegf_to_add
 
-        # self.roll_for_deactivation()
+        if self.steps > 40 and self.oxygen < 10:
+            self.roll_for_deactivation()
+
+
+    # rolls for a chance for the cell to become empty cell
+    def roll_for_deactivation(self):
+        if type(self).__name__ != "Empty":
+            roll = roll = r.random()
+
+            # decreasing odds of survival at lower oxygen levels
+            if roll > 0.2 + (self.oxygen)* 0.1:
+                new_empty_agent = Empty(self.pos, self.model)
+                coord = self.pos
+                self.model.grid.remove_agent(self)
+                self.model.grid.scheduler.remove(self)
+
+                self.model.grid.place_agent(new_empty_agent, coord)
+                self.model.grid.scheduler.add(new_empty_agent)
 
     def step(self):
         self.step_maintenance()
@@ -102,6 +121,7 @@ class Capillary(Cell):
                         t.vegf = 0
                         coord = t.pos
                         self.model.grid.remove_agent(t)
+                        self.model.grid.scheduler.remove(t)
                         new_cap = Capillary(coord, self.model)
                         self.model.grid.place_agent(new_cap, coord)
                         self.model.grid.scheduler.add(new_cap)
@@ -133,6 +153,7 @@ class Cancer(Cell):
                 self.subtract_oxygen(20)
                 coord = t.pos
                 self.model.grid.remove_agent(t)
+                self.model.grid.scheduler.remove(t)
                 new_cancer = Cancer(coord, self.model, vegf_mutation=self.vegf_mutation)
                 self.model.grid.place_agent(new_cancer, coord)
                 # when replacing an empty cell, make sure to add it to the scheduler
@@ -211,7 +232,7 @@ class PetriDish(Model):
             for y in range(height):
                 roll = r.random()
                 coords = (x, y)
-                if coords[0] == coords[1]:
+                if coords[0] == width - 1:
                     agent = Capillary(coords, self)
                 elif coords == cancer_coords:
                     agent = Cancer(coords, self)
