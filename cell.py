@@ -43,7 +43,7 @@ class Cell(Agent):
 
     def step_maintenance(self):
         self.steps += 1
-        self.subtract_oxygen(1)
+        self.subtract_oxygen(ss.CELL_OXYGEN_CONSUMPTION)
         targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
 
         targets.sort(key=lambda x: x.oxygen)
@@ -135,7 +135,7 @@ class Capillary(Cell):
                 # feedback system to limit the growth
                 # smaller capillary, less oxygen supply
                 # consume vegf
-                if neighboring_caps < 4 and t.vegf > 10 and type(t).__name__ == "Empty" and self.supply > 20:
+                if neighboring_caps < ss.CAPILLARY_GROWTH_DENSITY_LIMIT and t.vegf > 10 and type(t).__name__ == "Empty" and self.supply > 20:
                     roll = r.random()
                     if roll < 0.1:
                         neighboring_caps += 1
@@ -170,14 +170,14 @@ class Cancer(Cell):
         # self.step_maintenance()
         self.subtract_oxygen(10)
 
-        if self.oxygen < 30:
+        if self.oxygen < ss.CANCER_OXYGEN_VEGF_LIMIT:
             self.roll_for_vgef()
 
         targets = self.model.grid.neighbor_iter(self.pos, moore = True)
         for t in targets:
             roll = r.random()
-            if self.oxygen > 30 and type(t).__name__ == "Empty" and roll < 0.5:
-                self.subtract_oxygen(20)
+            if self.oxygen > ss.CANCER_OXYGEN_DUPLICATION_LIMIT and type(t).__name__ == "Empty" and roll < ss.CANCER_DUPLICATION_CHANCE:
+                self.subtract_oxygen(ss.CANCER_DUPLICATION_OXYGEN_COST)
                 coord = t.pos
                 self.model.grid.remove_agent(t)
                 self.model.grid.scheduler.remove(t)
@@ -190,13 +190,13 @@ class Cancer(Cell):
 
 
         if self.vegf_mutation:
-            self.vegf = 40
+            self.vegf = ss.CANCER_VEGF_SUPPLY
 
         # to propogate unused resources to other cells
         self.step_maintenance()
 
         if self.vegf_mutation:
-            self.vegf = 40
+            self.vegf = ss.CANCER_VEGF_SUPPLY
         # tumor necrosis
         # remove tumor cells in the middle of cluster
 
@@ -206,7 +206,7 @@ class Cancer(Cell):
 
     def roll_for_vgef(self):
         roll = r.random()
-        if roll < .05:
+        if roll < ss.CANCER_VEGF_CHANCE:
             self.vegf_mutation = True
 
 class Normal(Cell):
@@ -214,7 +214,7 @@ class Normal(Cell):
     Cell consumes some oxygen and send the remaining to other cells
     """
     def step(self):
-        self.subtract_oxygen(1)
+        self.subtract_oxygen(ss.NORMAL_OXYGEN_CONSUMPTION)
         self.step_maintenance()
 
 
@@ -244,7 +244,7 @@ class PetriDish(Model):
 
         self.grid.scheduler = self.schedule
 
-        cancer_x = random.randint(0, width - 1)
+        cancer_x = random.randint(width//4, width - 1)
         while True:
             cancer_y = cancer_x + random.randint(-5, 5)
             if cancer_y >= 0 and cancer_y < height and cancer_y != cancer_x:
