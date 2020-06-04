@@ -17,6 +17,18 @@ from mesa.space import SingleGrid
 from mesa.time  import BaseScheduler, SimultaneousActivation
 import random
 
+import sim_settings as ss
+
+
+
+def count_cell_type(cell_list, cell_type):
+    count = 0
+    for t in cell_list:
+        if type(t).__name__ == cell_type:
+            count += 1
+    return count
+
+
 class Cell(Agent):
     """
     Base Cell class.
@@ -34,6 +46,7 @@ class Cell(Agent):
         self.subtract_oxygen(1)
         targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
 
+        targets.sort(key=lambda x: x.oxygen)
         # the logic here need work
         # how do we decide the oxygen distribution
         # do we look at all neighbors?
@@ -44,17 +57,19 @@ class Cell(Agent):
         # oxygen packets can move in any direction
         for t in targets:
             if type(t).__name__ != "Capillary":
-                oxy_to_add = abs((self.oxygen - t.oxygen)/2)
+                oxy_to_add = abs((self.oxygen - t.oxygen)/3)
                 if self.oxygen > oxy_to_add and self.oxygen > t.oxygen:
                     self.subtract_oxygen(oxy_to_add)
                     t.add_oxygen(oxy_to_add)
 
+        targets.sort(key=lambda x: x.vegf)
+        for t in targets:
             vegf_to_add = (self.vegf - t.vegf)/2
             if vegf_to_add > 0:
                 self.vegf -= vegf_to_add
                 t.vegf += vegf_to_add
 
-        if self.steps > 40 and self.oxygen < 10:
+        if self.steps > ss.CELL_DEACTIVATION_MIN_STEPS and self.oxygen < 10:
             self.roll_for_deactivation()
 
 
@@ -64,7 +79,7 @@ class Cell(Agent):
             roll = roll = r.random()
 
             # decreasing odds of survival at lower oxygen levels
-            if roll > 0.2 + (self.oxygen)* 0.1:
+            if roll > 0.4 + (self.oxygen)* 0.1:
                 new_empty_agent = Empty(self.pos, self.model)
                 coord = self.pos
                 self.model.grid.remove_agent(self)
@@ -78,10 +93,10 @@ class Cell(Agent):
 
 
     def add_oxygen(self, n):
-        if self.oxygen + n < 100:
+        if self.oxygen + n < ss.MAX_OXYGEN_CAPACITY:
             self.oxygen += n
         else:
-            self.oxygen = 100
+            self.oxygen = ss.MAX_OXYGEN_CAPACITY
 
     def subtract_oxygen(self, n):
         if self.oxygen - n >= 0:
@@ -98,7 +113,7 @@ class Capillary(Cell):
     if the cell is empty and the amount of VEGF marker is above a certain threshold
     """
 
-    def __init__(self, unique_id, model, activated = True, supply = 100):
+    def __init__(self, unique_id, model, activated = True, supply = ss.MAX_OXYGEN_CAPACITY):
         super().__init__(unique_id, model, activated)
         self.supply = supply
 
@@ -107,27 +122,36 @@ class Capillary(Cell):
         # self.step_maintenance()
         # send activation oxygen to the neighboring cells if activated
         if self.activated:
-            targets = self.model.grid.neighbor_iter(self.pos, moore = True)
-            for t in targets:
+            targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
 
+            for t in targets:
+                if type(t).__name__ != "Capillary":
+                    t.add_oxygen(self.supply)
+
+                t_neighs = list(self.model.grid.neighbor_iter(t.pos, moore = True))
+                neighboring_caps = count_cell_type(t_neighs, "Capillary")
 
                 # limit blood vessel growth
                 # feedback system to limit the growth
                 # smaller capillary, less oxygen supply
                 # consume vegf
-                if t.vegf > 20 and type(t).__name__ == "Empty":
+                if neighboring_caps < 4 and t.vegf > 10 and type(t).__name__ == "Empty" and self.supply > 20:
                     roll = r.random()
                     if roll < 0.1:
+                        neighboring_caps += 1
                         t.vegf = 0
+                        for t_neigh in t_neighs:
+                            t_neigh.vegf = 0
                         coord = t.pos
                         self.model.grid.remove_agent(t)
                         self.model.grid.scheduler.remove(t)
-                        new_cap = Capillary(coord, self.model)
+                        new_cap = Capillary(coord, self.model, supply=ss.CAPILLARY_GROWTH_FRACTION*self.supply)
                         self.model.grid.place_agent(new_cap, coord)
                         self.model.grid.scheduler.add(new_cap)
 
-                t.add_oxygen(self.supply)
+                
         self.oxygen = self.supply
+        # self.step_maintenance()
 
 
 class Cancer(Cell):
@@ -144,12 +168,15 @@ class Cancer(Cell):
 
     def step(self):
         # self.step_maintenance()
-        self.subtract_oxygen(20)
+        self.subtract_oxygen(10)
+
+        if self.oxygen < 30:
+            self.roll_for_vgef()
 
         targets = self.model.grid.neighbor_iter(self.pos, moore = True)
         for t in targets:
             roll = r.random()
-            if self.oxygen > 30 and type(t).__name__ == "Empty" and roll < 0.3:
+            if self.oxygen > 30 and type(t).__name__ == "Empty" and roll < 0.5:
                 self.subtract_oxygen(20)
                 coord = t.pos
                 self.model.grid.remove_agent(t)
@@ -160,14 +187,16 @@ class Cancer(Cell):
                 self.model.grid.scheduler.add(new_cancer)
 
         # there is chance to mutate and produce vegf
-        self.roll_for_vgef()
+
 
         if self.vegf_mutation:
-            self.vegf = 30
+            self.vegf = 40
 
         # to propogate unused resources to other cells
         self.step_maintenance()
 
+        if self.vegf_mutation:
+            self.vegf = 40
         # tumor necrosis
         # remove tumor cells in the middle of cluster
 
@@ -177,7 +206,7 @@ class Cancer(Cell):
 
     def roll_for_vgef(self):
         roll = r.random()
-        if roll < .01:
+        if roll < .05:
             self.vegf_mutation = True
 
 class Normal(Cell):
