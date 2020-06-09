@@ -13,8 +13,8 @@ fig = plt.figure()
 
 ax1 = fig.add_subplot(111)
 
-ax1.set_xlim([0,int(max(x))])
-ax1.set_ylim([0,int(max([max(y1), max(y2)]))])
+ax1.set_xlim([0,int(max(x)) + 10])
+ax1.set_ylim([0,int(max([max(y1), max(y2)]) + 10)])
 ax1.set_title("number of cells over steps(time)")    
 ax1.set_xlabel('steps')
 ax1.set_ylabel('num of cells')
