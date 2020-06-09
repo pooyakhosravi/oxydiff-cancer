@@ -1,4 +1,6 @@
+import matplotlib.pyplot as plt
 
+figure,ax = plt.subplots(1,1)
 
 CELL_DEACTIVATION_MIN_STEPS = 350
 

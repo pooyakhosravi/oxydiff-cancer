@@ -16,10 +16,20 @@ from mesa.model import Model
 from mesa.space import SingleGrid
 from mesa.time  import BaseScheduler, SimultaneousActivation
 import random
+import matplotlib.pyplot as plt
+
 
 import sim_settings as ss
 
-
+fig,ax = plt.subplots(1,1)
+ax.set_xlabel('X') ; ax.set_ylabel('Y')
+ax.set_xlim(0,360) ; ax.set_ylim(-1,1)
+xs, ys = [], []
+Cell_Dict = {'cancer':0,'n':0, 'capillary':0}
+step_cancer = list()
+step_capillary = list()
+step_n = list()
+oxy_num = 0
 
 def count_cell_type(cell_list, cell_type):
     count = 0
@@ -42,6 +52,7 @@ class Cell(Agent):
         self.steps = 0
 
     def step_maintenance(self):
+        oxy_num = self.steps
         self.steps += 1
         self.subtract_oxygen(ss.CELL_OXYGEN_CONSUMPTION)
         targets = list(self.model.grid.neighbor_iter(self.pos, moore = True))
@@ -50,7 +61,6 @@ class Cell(Agent):
         # the logic here need work
         # how do we decide the oxygen distribution
         # do we look at all neighbors?
-
 
         # can move in all directions
         # probability based on differences and diffusion constant
@@ -82,11 +92,13 @@ class Cell(Agent):
             if roll > 0.4 + (self.oxygen)* 0.1:
                 new_empty_agent = Empty(self.pos, self.model)
                 coord = self.pos
+                print(coord)
                 self.model.grid.remove_agent(self)
                 self.model.grid.scheduler.remove(self)
 
                 self.model.grid.place_agent(new_empty_agent, coord)
                 self.model.grid.scheduler.add(new_empty_agent)
+                print(type(self).__name__, " cell died at" , coord)
 
     def step(self):
         self.step_maintenance()
@@ -130,7 +142,6 @@ class Capillary(Cell):
 
                 t_neighs = list(self.model.grid.neighbor_iter(t.pos, moore = True))
                 neighboring_caps = count_cell_type(t_neighs, "Capillary")
-
                 # limit blood vessel growth
                 # feedback system to limit the growth
                 # smaller capillary, less oxygen supply
@@ -146,6 +157,7 @@ class Capillary(Cell):
                         self.model.grid.remove_agent(t)
                         self.model.grid.scheduler.remove(t)
                         new_cap = Capillary(coord, self.model, supply=ss.CAPILLARY_GROWTH_FRACTION*self.supply)
+                        Cell_Dict['capillary'] = Cell_Dict.get('capillary') + 1
                         self.model.grid.place_agent(new_cap, coord)
                         self.model.grid.scheduler.add(new_cap)
 
@@ -182,6 +194,7 @@ class Cancer(Cell):
                 self.model.grid.remove_agent(t)
                 self.model.grid.scheduler.remove(t)
                 new_cancer = Cancer(coord, self.model, vegf_mutation=self.vegf_mutation)
+                Cell_Dict['cancer'] = Cell_Dict.get('cancer') + 1 
                 self.model.grid.place_agent(new_cancer, coord)
                 # when replacing an empty cell, make sure to add it to the scheduler
                 self.model.grid.scheduler.add(new_cancer)
@@ -262,11 +275,14 @@ class PetriDish(Model):
                 roll = r.random()
                 coords = (x, y)
                 if coords[0] == width - 1:
+                    Cell_Dict['capillary'] = Cell_Dict.get('capillary') + 1
                     agent = Capillary(coords, self)
                 elif coords == cancer_coords:
                     agent = Cancer(coords, self)
+                    Cell_Dict['cancer'] = Cell_Dict.get('cancer') + 1
                 elif roll <= proportion_normal:
                     agent = Normal(coords, self)
+                    Cell_Dict['n'] = Cell_Dict.get('n') + 1
                 else:
                     agent = Empty(coords, self)
 
@@ -277,6 +293,20 @@ class PetriDish(Model):
     # random permuation each time.
     # shuffle
     def step(self):
-
         # self.schedule = shuffle(self.schedule)
+        steps = self.schedule.steps
+        print(steps)
+        print(Cell_Dict)
+        with open("data.txt", "a") as file_object:
+            # Append 'hello' at the end of file
+            file_object.write(str(steps)+ " " + str(Cell_Dict['cancer']) + " " +  str(Cell_Dict['capillary']) + "\n")
+        # plt.scatter
+        # plt.show()
+        # plt_dynamic(steps, Cell_Dict['cancer'], ax , 'red')
         self.schedule.step() # goes through agents in the order of addition
+
+def plt_dynamic(x, y, ax, colors=['b']):
+    for color in colors:
+        ax.scatter(x, y, color)
+    fig.canvas.draw()
+    
