@@ -25,7 +25,7 @@ fig,ax = plt.subplots(1,1)
 ax.set_xlabel('X') ; ax.set_ylabel('Y')
 ax.set_xlim(0,360) ; ax.set_ylim(-1,1)
 xs, ys = [], []
-Cell_Dict = {'cancer':0,'n':0, 'capillary':0}
+Cell_Dict = {'cancer1':0,'cancer2':0,'cancer3':0,'n':0, 'capillary':0}
 step_cancer = list()
 step_capillary = list()
 step_n = list()
@@ -67,7 +67,7 @@ class Cell(Agent):
         # oxygen packets can move in any direction
         for t in targets:
             if type(t).__name__ != "Capillary":
-                oxy_to_add = abs((self.oxygen - t.oxygen)/3)
+                oxy_to_add = abs((self.oxygen - t.oxygen)/2)
                 if self.oxygen > oxy_to_add and self.oxygen > t.oxygen:
                     self.subtract_oxygen(oxy_to_add)
                     t.add_oxygen(oxy_to_add)
@@ -180,6 +180,63 @@ class Cancer(Cell):
 
     def step(self):
         # self.step_maintenance()
+        self.subtract_oxygen(30)
+
+        if self.oxygen < ss.CANCER_OXYGEN_VEGF_LIMIT:
+            self.roll_for_vgef()
+
+        targets = self.model.grid.neighbor_iter(self.pos, moore = True)
+        for t in targets:
+            roll = r.random()
+            if self.oxygen > ss.CANCER_OXYGEN_DUPLICATION_LIMIT and type(t).__name__ == "Empty" and roll < ss.CANCER_DUPLICATION_CHANCE * 0.5:
+                self.subtract_oxygen(ss.CANCER_DUPLICATION_OXYGEN_COST)
+                coord = t.pos
+                self.model.grid.remove_agent(t)
+                self.model.grid.scheduler.remove(t)
+                new_cancer = Cancer(coord, self.model, vegf_mutation=self.vegf_mutation)
+                Cell_Dict['cancer1'] = Cell_Dict.get('cancer1') + 1 
+                self.model.grid.place_agent(new_cancer, coord)
+                # when replacing an empty cell, make sure to add it to the scheduler
+                self.model.grid.scheduler.add(new_cancer)
+
+        # there is chance to mutate and produce vegf
+
+
+        if self.vegf_mutation:
+            self.vegf = ss.CANCER_VEGF_SUPPLY
+
+        # to propogate unused resources to other cells
+        self.step_maintenance()
+
+        if self.vegf_mutation:
+            self.vegf = ss.CANCER_VEGF_SUPPLY
+        # tumor necrosis
+        # remove tumor cells in the middle of cluster
+
+        # wont kill the intial one
+        # kill after some
+
+
+    def roll_for_vgef(self):
+        roll = r.random()
+        if roll < ss.CANCER_VEGF_CHANCE:
+            self.vegf_mutation = True
+
+
+class Cancer1(Cell):
+    """
+        Cancer cell that consumes oxygen to produce itself.
+        If there is enough nutrition, the cell will duplicate into a random neighboring cell while consuming half of its energy
+        There is also a little chance for the cancer cell to produce VEGF if it is oxygen deficient
+            - Vascular endothelial growth factor (VEGF) is a signalling protein that promotes the growth of new blood vessels.
+    """
+    def __init__(self, unique_id, model, activated = True, vegf_mutation = False):
+        super().__init__(unique_id, model, activated)
+        self.vegf_mutation = vegf_mutation
+
+
+    def step(self):
+        # self.step_maintenance()
         self.subtract_oxygen(10)
 
         if self.oxygen < ss.CANCER_OXYGEN_VEGF_LIMIT:
@@ -188,13 +245,77 @@ class Cancer(Cell):
         targets = self.model.grid.neighbor_iter(self.pos, moore = True)
         for t in targets:
             roll = r.random()
-            if self.oxygen > ss.CANCER_OXYGEN_DUPLICATION_LIMIT and type(t).__name__ == "Empty" and roll < ss.CANCER_DUPLICATION_CHANCE:
+            if self.oxygen > ss.CANCER_OXYGEN_DUPLICATION_LIMIT and type(t).__name__ == "Empty" and roll < ss.CANCER_DUPLICATION_CHANCE * 2:
                 self.subtract_oxygen(ss.CANCER_DUPLICATION_OXYGEN_COST)
                 coord = t.pos
                 self.model.grid.remove_agent(t)
                 self.model.grid.scheduler.remove(t)
-                new_cancer = Cancer(coord, self.model, vegf_mutation=self.vegf_mutation)
-                Cell_Dict['cancer'] = Cell_Dict.get('cancer') + 1 
+                new_cancer = Cancer1(coord, self.model, vegf_mutation=self.vegf_mutation)
+                Cell_Dict['cancer2'] = Cell_Dict.get('cancer2') + 1 
+                self.model.grid.place_agent(new_cancer, coord)
+                # when replacing an empty cell, make sure to add it to the scheduler
+                self.model.grid.scheduler.add(new_cancer)
+
+        # there is chance to mutate and produce vegf
+
+
+        if self.vegf_mutation:
+            self.vegf = ss.CANCER_VEGF_SUPPLY
+
+        # to propogate unused resources to other cells
+        self.step_maintenance()
+
+        if self.vegf_mutation:
+            self.vegf = ss.CANCER_VEGF_SUPPLY
+        # tumor necrosis
+        # remove tumor cells in the middle of cluster
+
+        # wont kill the intial one
+        # kill after some
+
+
+    def roll_for_vgef(self):
+        roll = r.random()
+        if roll < ss.CANCER_VEGF_CHANCE:
+            self.vegf_mutation = True
+
+
+
+class Cancer2(Cell):
+    """
+        Cancer cell that consumes oxygen to produce itself.
+        If there is enough nutrition, the cell will duplicate into a random neighboring cell while consuming half of its energy
+        There is also a little chance for the cancer cell to produce VEGF if it is oxygen deficient
+            - Vascular endothelial growth factor (VEGF) is a signalling protein that promotes the growth of new blood vessels.
+    """
+    def __init__(self, unique_id, model, activated = True, vegf_mutation = False):
+        super().__init__(unique_id, model, activated)
+        self.vegf_mutation = vegf_mutation
+
+
+    def step(self):
+        # self.step_maintenance()
+        self.subtract_oxygen(15)
+
+        if self.oxygen < ss.CANCER_OXYGEN_VEGF_LIMIT:
+            self.roll_for_vgef()
+
+        targets = self.model.grid.neighbor_iter(self.pos, moore = True)
+        for t in targets:
+            roll = r.random()
+            if self.oxygen > ss.CANCER_OXYGEN_DUPLICATION_LIMIT and type(t).__name__ != "Capillary" and roll < ss.CANCER_DUPLICATION_CHANCE* .3:
+
+                if type(t).__name__ == "Cancer":
+                    Cell_Dict['cancer1'] -= 1
+                if type(t).__name__ == "Cancer1":
+                    Cell_Dict['cancer2'] -= 1
+
+                self.subtract_oxygen(ss.CANCER_DUPLICATION_OXYGEN_COST)
+                coord = t.pos
+                self.model.grid.remove_agent(t)
+                self.model.grid.scheduler.remove(t)
+                new_cancer = Cancer2(coord, self.model, vegf_mutation=self.vegf_mutation)
+                Cell_Dict['cancer3'] = Cell_Dict.get('cancer3') + 1 
                 self.model.grid.place_agent(new_cancer, coord)
                 # when replacing an empty cell, make sure to add it to the scheduler
                 self.model.grid.scheduler.add(new_cancer)
@@ -269,17 +390,33 @@ class PetriDish(Model):
         # self.schedule.add(initial_activator)
         # self.grid.place_agent(initial_activator, center_coords)
 
+
         # roll a die and place Producer, Consumer or undifferentiated cell
         for x in range(width):
             for y in range(height):
                 roll = r.random()
                 coords = (x, y)
-                if coords[0] == width - 1:
+                if roll < 0.05:
+                    roll = r.random()
+                    agent = Cancer(coords, self)
+                    if roll < .33:
+                        agent = Cancer(coords, self)
+                        Cell_Dict['cancer1'] = Cell_Dict.get('cancer1') + 1
+                        
+                    elif roll < .66:
+                        agent = Cancer1(coords, self)
+                        Cell_Dict['cancer2'] = Cell_Dict.get('cancer2') + 1
+                    else:
+                        agent = Cancer2(coords, self)
+                        Cell_Dict['cancer3'] = Cell_Dict.get('cancer3') + 1
+
+                    
+                elif coords[0] == width - 1 or coords[0] == 0:
                     Cell_Dict['capillary'] = Cell_Dict.get('capillary') + 1
                     agent = Capillary(coords, self)
-                elif coords == cancer_coords:
-                    agent = Cancer(coords, self)
-                    Cell_Dict['cancer'] = Cell_Dict.get('cancer') + 1
+                # elif coords == cancer_coords:
+                #     agent = Cancer(coords, self)
+                #     Cell_Dict['cancer1'] = Cell_Dict.get('cancer1') + 1
                 elif roll <= proportion_normal:
                     agent = Normal(coords, self)
                     Cell_Dict['n'] = Cell_Dict.get('n') + 1
@@ -299,7 +436,7 @@ class PetriDish(Model):
         print(Cell_Dict)
         with open("data.txt", "a") as file_object:
             # Append 'hello' at the end of file
-            file_object.write(str(steps)+ " " + str(Cell_Dict['cancer']) + " " +  str(Cell_Dict['capillary']) + "\n")
+            file_object.write(str(steps)+ " " + str(Cell_Dict['cancer1']) + " " + str(Cell_Dict['cancer2']) + " " + str(Cell_Dict['cancer3']) + " "   +  str(Cell_Dict['capillary']) + "\n")
         # plt.scatter
         # plt.show()
         # plt_dynamic(steps, Cell_Dict['cancer'], ax , 'red')

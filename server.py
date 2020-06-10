@@ -3,6 +3,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 import cell as c
 import numpy as np
 
+import sim_settings as ss
 
 from mesa.visualization.ModularVisualization import VisualizationElement
 
@@ -33,6 +34,10 @@ def cell_portrayal(cell):
         cell_color = "green"
     elif type(cell).__name__ == "Cancer":
         cell_color = "purple"
+    elif type(cell).__name__ == "Cancer1":
+        cell_color = "blue"
+    elif type(cell).__name__ == "Cancer2":
+        cell_color = "orange"
     else:
         cell_color = "grey"
 
@@ -41,7 +46,7 @@ def cell_portrayal(cell):
                  # "Filled": str(cell.activated),
                  "Filled": "false",
                  "Layer": 0,
-                 "r": max(0.1, cell.oxygen / 100)}
+                 "r": max(0.1, cell.oxygen / ss.MAX_OXYGEN_CAPACITY)}
     return portrayal
 
 
@@ -53,6 +58,10 @@ def vegf_portrayal(cell):
         cell_color = "green"
     elif type(cell).__name__ == "Cancer":
         cell_color = "purple"
+    elif type(cell).__name__ == "Cancer1":
+        cell_color = "blue"
+    elif type(cell).__name__ == "Cancer2":
+        cell_color = "orange"
     else:
         cell_color = "grey"
 
